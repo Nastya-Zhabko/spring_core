@@ -1,105 +1,98 @@
 package nastyazhabko.dev.services;
 
+import nastyazhabko.dev.exceptions.DeleteLastUserAccountException;
 import nastyazhabko.dev.properties.AccountProperties;
 import nastyazhabko.dev.models.Account;
 import nastyazhabko.dev.models.User;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @Component
 public class AccountService {
-    private static Map<Integer, Integer> usersAccounts = new HashMap<>();
-    private static List<Account> accounts = new ArrayList<>();
-    private static int idGenerator = 0;
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private AccountProperties accountProperties;
+    private Map<Integer, Integer> usersAccounts = new HashMap<>();
+    private Map<Integer, Account> accounts = new HashMap<>();
+    private int idGenerator = 0;
 
+    private final UserService userService;
+    private final AccountProperties accountProperties;
 
-    public void createAccount(int userId) {
+    public AccountService(@Lazy UserService userService, AccountProperties accountProperties) {
+        this.userService = userService;
+        this.accountProperties = accountProperties;
+    }
+
+    public Account createAccount(int userId) {
         User user;
         Account account;
 
         try {
             user = userService.getUserById(userId);
         } catch (NoSuchElementException e) {
-            System.out.println(e.getMessage());
-            return;
+            throw new NoSuchElementException(e.getMessage());
         }
 
         if (user.getAccountList().isEmpty()) {
             account = new Account(idGenerator, userId, accountProperties.getDefaultAmount());
         } else {
-            account = new Account(idGenerator, userId, 0L);
-            System.out.println("Счет успешно создан: " + account);
+            account = new Account(idGenerator, userId, BigDecimal.ZERO);
         }
-
-        accounts.add(account);
+        accounts.put(account.getId(), account);
         user.addAccount(account);
         usersAccounts.put(idGenerator, userId);
         idGenerator++;
+        return account;
 
     }
 
-    public void addMoney(int accountId, Long money) {
-        if (money <= 0) {
-            System.out.println("Укажите положительную не нулевую сумму!");
-            return;
+    public Account addMoney(int accountId, BigDecimal money) {
+        if (money.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new NullPointerException("Ошибка: Укажите положительную не нулевую сумму!");
         }
         if (!usersAccounts.containsKey(accountId)) {
-            System.out.println(("Ошибка: Счета с id " + accountId + " не существует."));
-            return;
+            throw new NoSuchElementException("Ошибка: Счета с id " + accountId + " не существует.");
         } else {
-            accounts.get(accountId).addMoney(money);
-            System.out.println("Счет " + accountId + " успешно пополнен на " + money + ". Текущий баланс: " + accounts.get(accountId).getMoneyAmount());
+            Account account = accounts.get(accountId);
+            account.addMoney(money);
+            return account;
         }
     }
 
-    public void subtractMoney(int accountId, Long money) {
-        if (money <= 0) {
-            System.out.println("Укажите положительную не нулевую сумму!");
-            return;
+    public Account subtractMoney(int accountId, BigDecimal money) {
+        if (money.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new NullPointerException("Ошибка: Укажите положительную не нулевую сумму!");
         }
         if (!usersAccounts.containsKey(accountId)) {
-            System.out.println(("Ошибка: Счета с id " + accountId + " не существует."));
-            return;
+            throw new NoSuchElementException("Ошибка: Счета с id " + accountId + " не существует.");
         } else {
             try {
-                accounts.get(accountId).subtractMoney(money);
-                System.out.println("Деньги успешно сняты со счета " + accountId + " Текущий баланс: " + accounts.get(accountId).getMoneyAmount());
+                Account account = accounts.get(accountId);
+                account.subtractMoney(money);
+                return account;
             } catch (IllegalStateException e) {
-                System.out.println(e.getMessage());
-                return;
+                throw new IllegalArgumentException(e.getMessage());
             }
         }
     }
 
-    public void transferMoney(int senderAccountId, int recipientAccountId, Long money) {
-        if (money <= 0) {
-            System.out.println("Укажите положительную не нулевую сумму!");
-            return;
+    public List<Account> transferMoney(int senderAccountId, int recipientAccountId, BigDecimal money) {
+        if (money.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Ошибка: укажите положительную не нулевую сумму!");
         }
         if (!usersAccounts.containsKey(senderAccountId) && !usersAccounts.containsKey(recipientAccountId)) {
-            System.out.println(("Ошибка: Счета отправителя с id " + senderAccountId + " и счета получателя с id " + recipientAccountId + " не существует."));
-            return;
+            throw new NoSuchElementException("Ошибка: Счета отправителя с id " + senderAccountId + " и счета получателя с id " + recipientAccountId + " не существует.");
         }
         if (!usersAccounts.containsKey(senderAccountId)) {
-            System.out.println(("Ошибка: Счета отправителя с id " + senderAccountId + " не существует."));
-            return;
+            throw new NoSuchElementException("Ошибка: Счета отправителя с id " + senderAccountId + " не существует.");
         }
         if (!usersAccounts.containsKey(recipientAccountId)) {
-            System.out.println(("Ошибка: Счета получателя с id " + recipientAccountId + " не существует."));
-            return;
+            throw new NoSuchElementException("Ошибка: Счета получателя с id " + recipientAccountId + " не существует.");
         }
         if (senderAccountId == recipientAccountId) {
-            System.out.println(("Ошибка: В качестве отправителя и получателя указан один счет."));
-            return;
+            throw new IllegalArgumentException("Ошибка: В качестве отправителя и получателя указан один счет.");
         }
-
-
         Account senderAccount = accounts.get(senderAccountId);
         Account recipientAccount = accounts.get(recipientAccountId);
 
@@ -107,30 +100,25 @@ public class AccountService {
             try {
                 senderAccount.subtractMoney(money);
             } catch (IllegalStateException e) {
-                System.out.println(e.getMessage());
-                return;
+                throw new IllegalArgumentException(e.getMessage());
             }
 
         } else {
             try {
-                senderAccount.subtractMoney((long) (money + (money * accountProperties.getDefaultCommission()) / 100));
+                senderAccount.subtractMoney((money.add((money.multiply(accountProperties.getDefaultCommission())).divide(BigDecimal.valueOf(100)))));
             } catch (IllegalStateException e) {
-                System.out.println(e.getMessage());
-                return;
+                throw new IllegalArgumentException(e.getMessage());
             }
         }
         recipientAccount.addMoney(money);
-        System.out.println("Деньги успешно переведены со счета " + senderAccountId + " на счет "
-                + recipientAccountId + ". \nТекущий баланс на счете отправителя " + senderAccount.getMoneyAmount()
-                + ". \nТекущий баланс на счете получателя " + recipientAccount.getMoneyAmount());
+        return List.of(senderAccount, recipientAccount);
     }
 
     public void closeAccount(int accountId) {
         int userId;
         User user;
         if (!usersAccounts.containsKey(accountId)) {
-            System.out.println(("Ошибка: Счета с id " + accountId + " не существует."));
-            return;
+            throw new NoSuchElementException("Ошибка: Счета с id " + accountId + " не существует.");
         } else {
             userId = usersAccounts.get(accountId);
         }
@@ -142,17 +130,13 @@ public class AccountService {
             return;
         }
 
-
         long countOfAccounts = user.getAccountList()
                 .stream()
                 .count();
         if (countOfAccounts == 1) {
-            System.out.println("Ошибка: аккаунт с id "
-                    + accountId + " единственный у пользователя "
-                    + userId + ". Удаление невозможно!");
-            return;
+            throw new DeleteLastUserAccountException(accountId, userId);
         } else {
-            Long moneyAmount = accounts.stream()
+            BigDecimal moneyAmount = accounts.values().stream()
                     .filter(account -> account.getId() == accountId)
                     .findFirst()
                     .get()
@@ -163,7 +147,6 @@ public class AccountService {
             user.getAccountList()
                     .getFirst()
                     .addMoney(moneyAmount);
-            System.out.println("Аккаунт успешно закрыт!");
         }
     }
 

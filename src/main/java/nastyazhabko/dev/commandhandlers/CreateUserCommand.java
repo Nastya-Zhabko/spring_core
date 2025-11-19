@@ -1,19 +1,24 @@
 package nastyazhabko.dev.commandhandlers;
 
+import nastyazhabko.dev.models.User;
 import nastyazhabko.dev.services.GetConsoleInputValue;
 import nastyazhabko.dev.services.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CreateUserCommand implements OperationCommand {
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final GetConsoleInputValue getConsoleInputValue;
 
+    public CreateUserCommand(UserService userService, GetConsoleInputValue getConsoleInputValue) {
+        this.userService = userService;
+        this.getConsoleInputValue = getConsoleInputValue;
+    }
 
     @Override
     public void execute() {
-        userService.addUser(GetConsoleInputValue.getStringValue("Введите логин пользователя"));
+        User user = userService.addUser(getConsoleInputValue.getStringValue("Введите логин пользователя"));
+        System.out.println("Пользователь успешно создан: " + user);
     }
 
     @Override

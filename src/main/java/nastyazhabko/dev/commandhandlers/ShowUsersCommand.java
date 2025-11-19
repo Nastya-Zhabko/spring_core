@@ -1,17 +1,19 @@
 package nastyazhabko.dev.commandhandlers;
 
 import nastyazhabko.dev.services.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ShowUsersCommand implements OperationCommand {
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    public ShowUsersCommand(UserService userService) {
+        this.userService = userService;
+    }
 
     @Override
     public void execute() {
-        userService.getAllUsers();
+        userService.getAllUsers().stream().forEach(System.out::println);
     }
 
     @Override

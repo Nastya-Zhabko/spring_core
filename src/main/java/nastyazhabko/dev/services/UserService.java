@@ -1,8 +1,8 @@
 package nastyazhabko.dev.services;
 
+import nastyazhabko.dev.exceptions.LoginAlreadyExistException;
 import nastyazhabko.dev.models.Account;
 import nastyazhabko.dev.models.User;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -12,23 +12,25 @@ import java.util.Optional;
 
 @Component
 public class UserService {
-    private static List<User> users = new ArrayList<>();
-    private static List<String> allLogins = new ArrayList<>();
-    private static int idGenerator = 0;
-    @Autowired
-    private AccountService accountService;
+    private List<User> users = new ArrayList<>();
+    private List<String> allLogins = new ArrayList<>();
+    private int idGenerator = 0;
 
-    public void getAllUsers() {
-        users.stream().forEach(System.out::println);
+    private final AccountService accountService;
+
+    public UserService(AccountService accountService) {
+        this.accountService = accountService;
+    }
+
+    public List<User> getAllUsers() {
+        return users;
     }
 
     public User addUser(String login) {
         if (allLogins.contains(login)) {
-            System.out.println("Ошибка: Пользователь с логином " + login + " уже существует");
-            return null;
-        } else if (login.isEmpty()) {
-            System.out.println("Ошибка: введите непустое значение");
-            return null;
+            throw new LoginAlreadyExistException(login);
+        } else if (login.trim().isEmpty() || login == null) {
+            throw new IllegalArgumentException("Ошибка: введите непустое значение");
         } else {
             List<Account> accountList = new ArrayList<>();
             User user = new User(idGenerator, login, accountList);
@@ -36,7 +38,6 @@ public class UserService {
             accountService.createAccount(idGenerator);
             allLogins.add(login);
             idGenerator++;
-            System.out.println("Пользователь успешно создан: " + user);
             return user;
         }
     }

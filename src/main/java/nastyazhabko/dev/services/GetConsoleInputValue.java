@@ -1,13 +1,20 @@
 package nastyazhabko.dev.services;
 
+import org.springframework.stereotype.Component;
+
 import java.util.InputMismatchException;
 import java.util.Scanner;
 
-
+@Component
 public class GetConsoleInputValue {
-    private static final Scanner sc = new Scanner(System.in);
+    private final Scanner sc;
+    private final static String stringIncorrectMessage = "Введите корректную строку!";
 
-    public static String getStringValue(String text) {
+    public GetConsoleInputValue(Scanner sc) {
+        this.sc = sc;
+    }
+
+    public String getStringValue(String text) {
         System.out.println(text);
         String result;
 
@@ -15,22 +22,18 @@ public class GetConsoleInputValue {
             result = sc.nextLine();
             return result;
         } catch (InputMismatchException e) {
-            System.out.println("Введите корректную строку!");
-            return null;
+            throw new InputMismatchException(stringIncorrectMessage);
         }
     }
 
-    public static int getIntValue(String text) {
+    public int getIntValue(String text) {
         System.out.println(text);
-        int result;
-
-        try {
-            result = sc.nextInt();
-            sc.nextLine();
-            return result;
-        } catch (InputMismatchException e) {
-            System.out.println("Введите корректную строку!");
-            return 0;
+        while (true) {
+            try {
+                return Integer.parseInt(sc.nextLine());
+            } catch (NumberFormatException e) {
+                throw new InputMismatchException(stringIncorrectMessage);
+            }
         }
     }
 }

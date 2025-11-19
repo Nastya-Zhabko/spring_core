@@ -2,17 +2,22 @@ package nastyazhabko.dev.commandhandlers;
 
 import nastyazhabko.dev.services.GetConsoleInputValue;
 import nastyazhabko.dev.services.AccountService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CloseAccountCommand implements OperationCommand {
-    @Autowired
-    private AccountService accountService;
+    private final AccountService accountService;
+    private final GetConsoleInputValue getConsoleInputValue;
+
+    public CloseAccountCommand(AccountService accountService, GetConsoleInputValue getConsoleInputValue) {
+        this.accountService = accountService;
+        this.getConsoleInputValue = getConsoleInputValue;
+    }
 
     @Override
     public void execute() {
-        accountService.closeAccount(GetConsoleInputValue.getIntValue("Введите id аккаунта, который требуется закрыть."));
+        accountService.closeAccount(getConsoleInputValue.getIntValue("Введите id аккаунта, который требуется закрыть."));
+        System.out.println("Аккаунт успешно закрыт!");
     }
 
     @Override
