@@ -1,24 +1,37 @@
 package nastyazhabko.dev.models;
 
+import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 
+@Entity
+@Table(name = "accounts")
 public class Account {
-    private final int id;
-    private final int userId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @Column(name = "money_amount")
     private BigDecimal moneyAmount;
 
-    public Account(int id, int userId, BigDecimal moneyAmount) {
-        this.id = id;
-        this.userId = userId;
+    public Account(User user, BigDecimal moneyAmount) {
+        this.user = user;
         this.moneyAmount = moneyAmount;
     }
 
+    public Account() {
+    }
+
     public void addMoney(BigDecimal money) {
-        if (money.subtract(money).compareTo(BigDecimal.ZERO) > 0) {
+        if (moneyAmount.add(money).compareTo(BigDecimal.ZERO) >= 0) {
             moneyAmount = moneyAmount.add(money);
-        } else
+        } else {
             throw new IllegalStateException("Ошибка: На счете меньше средств, чем требуется снять. Текущий баланс: " + moneyAmount);
+        }
     }
 
     public void subtractMoney(BigDecimal money) {
@@ -36,11 +49,15 @@ public class Account {
         return moneyAmount;
     }
 
+    //если не понадобиться, удалить
+    public User getUser() {
+        return user;
+    }
+
     @Override
     public String toString() {
         return "Account{" +
                 "id=" + id +
-                ", userId=" + userId +
                 ", moneyAmount=" + moneyAmount +
                 '}';
     }

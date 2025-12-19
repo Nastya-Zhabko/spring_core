@@ -1,5 +1,6 @@
 package nastyazhabko.dev.services;
 
+import nastyazhabko.dev.TransactionHelper;
 import nastyazhabko.dev.exceptions.DeleteLastUserAccountException;
 import nastyazhabko.dev.properties.AccountProperties;
 import nastyazhabko.dev.models.Account;
@@ -12,38 +13,37 @@ import java.util.*;
 
 @Component
 public class AccountService {
-    private Map<Integer, Integer> usersAccounts = new HashMap<>();
-    private Map<Integer, Account> accounts = new HashMap<>();
-    private int idGenerator = 0;
-
     private final UserService userService;
     private final AccountProperties accountProperties;
+    private final TransactionHelper transactionHelper;
 
-    public AccountService(@Lazy UserService userService, AccountProperties accountProperties) {
+    public AccountService(@Lazy UserService userService, AccountProperties accountProperties, TransactionHelper transactionHelper) {
         this.userService = userService;
         this.accountProperties = accountProperties;
+        this.transactionHelper = transactionHelper;
+    }
+
+    public Account createAccount(User user) {
+            Account account = new Account(user, accountProperties.getDefaultAmount());
+            return account;
     }
 
     public Account createAccount(int userId) {
-        User user;
-        Account account;
 
-        try {
-            user = userService.getUserById(userId);
-        } catch (NoSuchElementException e) {
-            throw new NoSuchElementException(e.getMessage());
-        }
-
-        if (user.getAccountList().isEmpty()) {
-            account = new Account(idGenerator, userId, accountProperties.getDefaultAmount());
-        } else {
-            account = new Account(idGenerator, userId, BigDecimal.ZERO);
-        }
-        accounts.put(account.getId(), account);
-        user.addAccount(account);
-        usersAccounts.put(idGenerator, userId);
-        idGenerator++;
-        return account;
+        return transactionHelper.executeInTransaction(session -> {
+            User user;
+            Account account;
+                try {
+                    user = userService.getUserById(userId);
+                } catch (NoSuchElementException e) {
+                    throw new NoSuchElementException(e.getMessage());
+                }
+                account = new Account(user, BigDecimal.ZERO);
+                user.addAccount(account);
+                session.persist(account);
+                session.persist(user);
+            return account;
+        });
 
     }
 
@@ -51,103 +51,132 @@ public class AccountService {
         if (money.compareTo(BigDecimal.ZERO) <= 0) {
             throw new NullPointerException("Ошибка: Укажите положительную не нулевую сумму!");
         }
-        if (!usersAccounts.containsKey(accountId)) {
-            throw new NoSuchElementException("Ошибка: Счета с id " + accountId + " не существует.");
-        } else {
-            Account account = accounts.get(accountId);
-            account.addMoney(money);
-            return account;
-        }
+        return transactionHelper.executeInTransaction(session -> {
+            Account account = session.createQuery("""
+                    SELECT a from Account a
+                    WHERE a.id = :id
+                    """, Account.class).setParameter("id", accountId).uniqueResult();
+            if (account == null) {
+                throw new NoSuchElementException("Ошибка: Счета с id " + accountId + " не существует.");
+            }
+                    account.addMoney(money);
+                    return account;
+        });
+
+
     }
 
     public Account subtractMoney(int accountId, BigDecimal money) {
         if (money.compareTo(BigDecimal.ZERO) <= 0) {
             throw new NullPointerException("Ошибка: Укажите положительную не нулевую сумму!");
         }
-        if (!usersAccounts.containsKey(accountId)) {
-            throw new NoSuchElementException("Ошибка: Счета с id " + accountId + " не существует.");
-        } else {
-            try {
-                Account account = accounts.get(accountId);
-                account.subtractMoney(money);
-                return account;
-            } catch (IllegalStateException e) {
-                throw new IllegalArgumentException(e.getMessage());
+
+        return transactionHelper.executeInTransaction(session -> {
+            int accountIdExists = -1;
+            accountIdExists = session.createQuery("""
+                    SELECT a from Account a
+                    WHERE a.id = :id
+                    """, Account.class).setParameter("id", accountId).uniqueResult().getId();
+            if (accountIdExists == -1) {
+                throw new NoSuchElementException("Ошибка: Счета с id " + accountId + " не существует.");
             }
-        }
+           Account account = session.createQuery("""
+                    SELECT a FROM Account a
+                    WHERE a.id=:id
+                    """, Account.class).setParameter("id", accountId).uniqueResult();
+            account.subtractMoney(money);
+            return account;
+        });
+
     }
 
     public List<Account> transferMoney(int senderAccountId, int recipientAccountId, BigDecimal money) {
         if (money.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Ошибка: укажите положительную не нулевую сумму!");
         }
-        if (!usersAccounts.containsKey(senderAccountId) && !usersAccounts.containsKey(recipientAccountId)) {
-            throw new NoSuchElementException("Ошибка: Счета отправителя с id " + senderAccountId + " и счета получателя с id " + recipientAccountId + " не существует.");
-        }
-        if (!usersAccounts.containsKey(senderAccountId)) {
-            throw new NoSuchElementException("Ошибка: Счета отправителя с id " + senderAccountId + " не существует.");
-        }
-        if (!usersAccounts.containsKey(recipientAccountId)) {
-            throw new NoSuchElementException("Ошибка: Счета получателя с id " + recipientAccountId + " не существует.");
-        }
-        if (senderAccountId == recipientAccountId) {
-            throw new IllegalArgumentException("Ошибка: В качестве отправителя и получателя указан один счет.");
-        }
-        Account senderAccount = accounts.get(senderAccountId);
-        Account recipientAccount = accounts.get(recipientAccountId);
+        return transactionHelper.executeInTransaction(session -> {
+            Account senderAccount;
+            Account recipientAccount;
 
-        if (usersAccounts.get(senderAccountId) == usersAccounts.get(recipientAccountId)) {
-            try {
-                senderAccount.subtractMoney(money);
-            } catch (IllegalStateException e) {
-                throw new IllegalArgumentException(e.getMessage());
+            senderAccount = session.createQuery("""
+                    SELECT a from Account a
+                    WHERE a.id = :id
+                    """, Account.class).setParameter("id", senderAccountId).uniqueResult();
+            recipientAccount = session.createQuery("""
+                    SELECT a from Account a
+                    WHERE a.id = :id
+                    """, Account.class).setParameter("id", recipientAccountId).uniqueResult();
+
+
+            if (senderAccount.getId() == -1 && recipientAccount.getId() == -1) {
+                throw new NoSuchElementException("Ошибка: Счета отправителя с id " + senderAccountId + " и счета получателя с id " + recipientAccountId + " не существует.");
+            }
+            else if (senderAccount.getId() == -1) {
+                throw new NoSuchElementException("Ошибка: Счета отправителя с id " + senderAccountId + " не существует.");
+            }
+            else if (recipientAccount.getId() == -1) {
+                throw new NoSuchElementException("Ошибка: Счета получателя с id " + recipientAccountId + " не существует.");
+            }
+            else if (senderAccount.getId() == recipientAccount.getId()) {
+                throw new IllegalArgumentException("Ошибка: В качестве отправителя и получателя указан один счет.");
             }
 
-        } else {
-            try {
-                senderAccount.subtractMoney((money.add((money.multiply(accountProperties.getDefaultCommission())).divide(BigDecimal.valueOf(100)))));
-            } catch (IllegalStateException e) {
-                throw new IllegalArgumentException(e.getMessage());
+            if (senderAccount.getUser().getId() == recipientAccount.getUser().getId()) {
+                try {
+                    senderAccount.subtractMoney(money);
+                } catch (IllegalStateException e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+            } else {
+                try {
+                    senderAccount.subtractMoney((money.add((money.multiply(accountProperties.getDefaultCommission())).divide(BigDecimal.valueOf(100)))));
+                } catch (IllegalStateException e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
             }
-        }
-        recipientAccount.addMoney(money);
-        return List.of(senderAccount, recipientAccount);
+            recipientAccount.addMoney(money);
+            return List.of(senderAccount, recipientAccount);
+        });
+
+
     }
 
     public void closeAccount(int accountId) {
-        int userId;
-        User user;
-        if (!usersAccounts.containsKey(accountId)) {
-            throw new NoSuchElementException("Ошибка: Счета с id " + accountId + " не существует.");
-        } else {
-            userId = usersAccounts.get(accountId);
-        }
+        transactionHelper.executeInTransaction(session -> {
+            User user;
+            Account accountExists;
+            accountExists = session.createQuery("""
+                    SELECT a from Account a
+                    WHERE a.id = :id
+                    """, Account.class).setParameter("id", accountId).uniqueResult();
 
-        try {
-            user = userService.getUserById(userId);
-        } catch (NoSuchElementException e) {
-            System.out.println(e.getMessage());
-            return;
-        }
+            if (accountExists == null) {
+                throw new NoSuchElementException("Ошибка: Счета с id " + accountId + " не существует.");
+            } else {
+                try {
+                    user = accountExists.getUser();
+                } catch (NoSuchElementException e) {
+                    throw new NoSuchElementException("Ошибка, аккаунт " + accountExists + " не связан с пользователем!");
+                }
+            }
+            long countOfAccounts = user.getAccountList()
+                    .stream()
+                    .count();
+            if (countOfAccounts == 1) {
+                throw new DeleteLastUserAccountException(accountId, user.getId());
+            } else {
+                BigDecimal moneyAmount = user.getAccountList().stream()
+                        .filter(account -> account.getId() == accountId)
+                        .findFirst()
+                        .get()
+                        .getMoneyAmount();
+                user.getAccountList().removeIf(account -> account.getId() == accountId);
+                user.getAccountList()
+                        .getFirst()
+                        .addMoney(moneyAmount);
+            }
+        });
 
-        long countOfAccounts = user.getAccountList()
-                .stream()
-                .count();
-        if (countOfAccounts == 1) {
-            throw new DeleteLastUserAccountException(accountId, userId);
-        } else {
-            BigDecimal moneyAmount = accounts.values().stream()
-                    .filter(account -> account.getId() == accountId)
-                    .findFirst()
-                    .get()
-                    .getMoneyAmount();
-            user.getAccountList().removeIf(account -> account.getId() == accountId);
-            usersAccounts.remove(accountId, userId);
-            accounts.remove(accountId);
-            user.getAccountList()
-                    .getFirst()
-                    .addMoney(moneyAmount);
-        }
     }
 
 }

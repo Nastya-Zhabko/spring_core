@@ -1,18 +1,28 @@
 package nastyazhabko.dev.models;
 
-import org.springframework.stereotype.Component;
+import jakarta.persistence.*;
 
 import java.util.List;
 
+@Entity
+@Table(name = "users")
 public class User {
-    private final int id;
-    private final String login;
-    private final List<Account> accountList;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
 
-    public User(int id, String login, List<Account> accountList) {
-        this.id = id;
+    @Column(name = "login")
+    private String login;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, orphanRemoval = true)
+    private List<Account> accountList;
+
+    public User(String login, List<Account> accountList) {
         this.login = login;
         this.accountList = accountList;
+    }
+
+    public User() {
     }
 
     public void addAccount(Account account) {
