@@ -21,9 +21,12 @@ public class TransferAccountCommand implements OperationCommand {
 
     @Override
     public void execute() {
-        int senderAccountId = getConsoleInputValue.getIntValue("Введите id аккаунта, с которого будет осуществляться перевод.");
-        int recipientAccountId = getConsoleInputValue.getIntValue("Введите id аккаунта, на который будет осуществляться перевод.");
-        BigDecimal money = BigDecimal.valueOf(getConsoleInputValue.getIntValue("Введите cумму, которую хотите внести."));
+        System.out.println("Введите id аккаунта, с которого будет осуществляться перевод.");
+        int senderAccountId = getConsoleInputValue.getIntValue();
+        System.out.println("Введите id аккаунта, на который будет осуществляться перевод.");
+        int recipientAccountId = getConsoleInputValue.getIntValue();
+        System.out.println("Введите cумму, которую хотите внести.");
+        BigDecimal money = BigDecimal.valueOf(getConsoleInputValue.getIntValue());
         List<Account> accountList = accountService.transferMoney(senderAccountId, recipientAccountId, money);
 
         System.out.println("Деньги успешно переведены со счета " + senderAccountId + " на счет "

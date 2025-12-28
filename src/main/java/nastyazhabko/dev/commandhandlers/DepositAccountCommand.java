@@ -19,8 +19,10 @@ public class DepositAccountCommand implements OperationCommand {
 
     @Override
     public void execute() {
-        int accountId = getConsoleInputValue.getIntValue("Введите id аккаунта, который требуется пополнить.");
-        BigDecimal money = BigDecimal.valueOf(getConsoleInputValue.getIntValue("Введите cумму, которую хотите внести."));
+        System.out.println("Введите id аккаунта, который требуется пополнить.");
+        int accountId = getConsoleInputValue.getIntValue();
+        System.out.println("Введите cумму, которую хотите внести.");
+        BigDecimal money = BigDecimal.valueOf(getConsoleInputValue.getIntValue());
         Account account = accountService.addMoney(accountId, money);
         System.out.println("Счет " + accountId + " успешно пополнен на " + money + ". Текущий баланс: " + account.getMoneyAmount());
     }

@@ -27,11 +27,10 @@ public class Account {
     }
 
     public void addMoney(BigDecimal money) {
-        if (moneyAmount.add(money).compareTo(BigDecimal.ZERO) >= 0) {
-            moneyAmount = moneyAmount.add(money);
-        } else {
+        if (moneyAmount.add(money).compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalStateException("Ошибка: На счете меньше средств, чем требуется снять. Текущий баланс: " + moneyAmount);
         }
+        moneyAmount = moneyAmount.add(money);
     }
 
     public void subtractMoney(BigDecimal money) {
@@ -49,7 +48,6 @@ public class Account {
         return moneyAmount;
     }
 
-    //если не понадобиться, удалить
     public User getUser() {
         return user;
     }

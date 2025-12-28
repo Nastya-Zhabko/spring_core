@@ -17,7 +17,8 @@ public class CreateUserCommand implements OperationCommand {
 
     @Override
     public void execute() {
-        User user = userService.addUser(getConsoleInputValue.getStringValue("Введите логин пользователя"));
+        System.out.println("Введите логин пользователя");
+        User user = userService.addUser(getConsoleInputValue.getStringValue());
         System.out.println("Пользователь успешно создан: " + user);
     }
 

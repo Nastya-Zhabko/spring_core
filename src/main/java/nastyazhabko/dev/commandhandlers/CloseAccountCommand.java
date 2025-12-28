@@ -16,7 +16,8 @@ public class CloseAccountCommand implements OperationCommand {
 
     @Override
     public void execute() {
-        accountService.closeAccount(getConsoleInputValue.getIntValue("Введите id аккаунта, который требуется закрыть."));
+        System.out.println("Введите id аккаунта, который требуется закрыть.");
+        accountService.closeAccount(getConsoleInputValue.getIntValue());
         System.out.println("Аккаунт успешно закрыт!");
     }
 

@@ -19,8 +19,10 @@ public class WithdrawAccountCommand implements OperationCommand {
 
     @Override
     public void execute() {
-        int accountId = getConsoleInputValue.getIntValue("Введите id аккаунта, с которого требуется снять деньги.");
-        BigDecimal money = BigDecimal.valueOf(getConsoleInputValue.getIntValue("Введите cумму, которую хотите снять."));
+        System.out.println("Введите id аккаунта, с которого требуется снять деньги.");
+        int accountId = getConsoleInputValue.getIntValue();
+        System.out.println("Введите cумму, которую хотите снять.");
+        BigDecimal money = BigDecimal.valueOf(getConsoleInputValue.getIntValue());
 
         Account account = accountService.subtractMoney(accountId, money);
 

@@ -22,7 +22,8 @@ public class OperationsConsoleListener implements Runnable {
     public void run() {
         while (running) {
             try {
-                String command = getConsoleInputValue.getStringValue("Введите команду, которую вы хотите выполнить: ");
+                System.out.println("Введите команду, которую вы хотите выполнить: ");
+                String command = getConsoleInputValue.getStringValue();
 
                 ConsoleOperationType operationType = parseCommand(command);
 

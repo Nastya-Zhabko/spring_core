@@ -7,15 +7,10 @@ import java.util.Scanner;
 
 @Component
 public class GetConsoleInputValue {
-    private final Scanner sc;
-    private final static String stringIncorrectMessage = "Введите корректную строку!";
+    private final Scanner sc = new Scanner(System.in);
+    private final String stringIncorrectMessage = "Введите корректную строку!";
 
-    public GetConsoleInputValue(Scanner sc) {
-        this.sc = sc;
-    }
-
-    public String getStringValue(String text) {
-        System.out.println(text);
+    public String getStringValue() {
         String result;
 
         try {
@@ -26,8 +21,7 @@ public class GetConsoleInputValue {
         }
     }
 
-    public int getIntValue(String text) {
-        System.out.println(text);
+    public int getIntValue() {
         while (true) {
             try {
                 return Integer.parseInt(sc.nextLine());

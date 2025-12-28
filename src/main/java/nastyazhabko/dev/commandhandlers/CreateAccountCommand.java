@@ -17,7 +17,8 @@ public class CreateAccountCommand implements OperationCommand {
 
     @Override
     public void execute() {
-        Account account = accountService.createAccount(getConsoleInputValue.getIntValue("Введите id пользователя, для которого нужно создать аккаунт."));
+        System.out.println("Введите id пользователя, для которого нужно создать аккаунт.");
+        Account account = accountService.createAccount(getConsoleInputValue.getIntValue());
         System.out.println("Счет успешно создан: " + account);
     }
 

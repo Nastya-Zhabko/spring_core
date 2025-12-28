@@ -7,13 +7,10 @@ import java.math.BigDecimal;
 
 @Component
 public class AccountProperties {
-    private final BigDecimal defaultAmount;
-    private final BigDecimal defaultCommission;
-
-    public AccountProperties(@Value("${account.default-amount}") BigDecimal defaultAmount, @Value("${account.transfer-commission}") BigDecimal defaultCommission) {
-        this.defaultAmount = defaultAmount;
-        this.defaultCommission = defaultCommission;
-    }
+    @Value("${account.default-amount}")
+    private BigDecimal defaultAmount;
+    @Value("${account.transfer-commission}")
+    private BigDecimal defaultCommission;
 
     public BigDecimal getDefaultAmount() {
         return defaultAmount;
